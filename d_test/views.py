@@ -124,6 +124,7 @@ def get_values(request):
         except ValueError, TableInfo.DoesNotExist:
             pass
 
+        
     if table:
         json_data['fields'] = [{'id':f.pk,
                                 'title':f.title,
