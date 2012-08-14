@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Тестовый проект на Django</title>
+    <script type='text/javascript' src='{{ STATIC_URL }}jquery.1.8.0.js'></script>
+    <link type="text/css" href="{{ STATIC_URL }}css/ui-lightness/jquery-ui-1.8.22.custom.css" rel="stylesheet" />
+    <script type="text/javascript" src="{{ STATIC_URL }}jquery-ui-1.8.22.custom.min.js"></script>
+
+    <script type='text/javascript' src='{{ STATIC_URL }}jquery.jeditable.js'></script>
+    <style type="text/css">
+            /*demo page css*/
+        body #ui-datepicker-div{ font: 72% "Trebuchet MS", sans-serif; }
+    </style>
+
+    <style type="text/css">
+        .fon {
+            width: 1008px;
+            float: left;
+        }
+        .leftColumn {
+            width: 200px;
+            float: left;
+        }
+        .centerColumn {
+            width: 8px;
+            float: left;
+        }
+        .rightColumn {
+            width: 800px;
+            float: left;
+        }
+        .db_table {
+            border-collapse: collapse;
+        }
+        .db_table thead td {
+            border:1px solid #a52a2a;
+            padding:4px;
+        }
+        div.cell {
+            width:inherit;
+            height:inherit;
+        }
+        div.a_selected{
+            background: #f5f5dc;
+        }
+        .db_table tbody td {
+            border: 1px dotted #ffdead;
+        }
+        img.loading{
+            width:16px;height:16px;
+        }
+        .clear {
+            clear: both;
+        }
+    </style>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $.datepicker.regional['ru'] = {clearText: 'Очистить', clearStatus: '',
+                closeText: 'Закрыть', closeStatus: '',
+                prevText: '<Пред',  prevStatus: '',
+                nextText: 'След>', nextStatus: '',
+                currentText: 'Сегодня', currentStatus: '',
+                monthNames: ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                    'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
+                monthNamesShort: ['Янв','Фев','Мар','Апр','Май','Июн',
+                    'Июл','Авг','Сен','Окт','Ноя','Дек'],
+                monthStatus: '', yearStatus: '',
+                weekHeader: 'Не', weekStatus: '',
+                dayNames: ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'],
+                dayNamesShort: ['вск','пнд','втр','срд','чтв','птн','сбт'],
+                dayNamesMin: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
+                dayStatus: 'DD', dateStatus: 'D, M d',
+                dateFormat: 'yy-mm-dd', firstDay: 1,
+                initStatus: '', isRTL: false};
+
+            $.datepicker.setDefaults($.datepicker.regional['ru']);
+
+            jQuery(document).ajaxSend(function(event, xhr, settings) {
+                function getCookie(name) {
+                    var cookieValue = null;
+                    if (document.cookie && document.cookie != '') {
+                        var cookies = document.cookie.split(';');
+                        for (var i = 0; i < cookies.length; i++) {
+                            var cookie = jQuery.trim(cookies[i]);
+                            // Does this cookie string begin with the name we want?
+                            if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                function sameOrigin(url) {
+                    // url could be relative or scheme relative or absolute
+                    var host = document.location.host; // host + port
+                    var protocol = document.location.protocol;
+                    var sr_origin = '//' + host;
+                    var origin = protocol + sr_origin;
+                    // Allow absolute or scheme relative URLs to same origin
+                    return (url == origin || url.slice(0, origin.length + 1) == origin + '/') ||
+                            (url == sr_origin || url.slice(0, sr_origin.length + 1) == sr_origin + '/') ||
+                        // or any other URL that isn't scheme relative or absolute i.e relative.
+                            !(/^(\/\/|http:|https:).*/.test(url));
+                }
+                function safeMethod(method) {
+                    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+                }
+
+                if (!safeMethod(settings.type) && sameOrigin(settings.url)) {
+                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+                }
+            });
+
+            $.editable.addInputType( 'datepicker', {
+                element: function( settings, original ) {
+                    var form = $( this ),
+                            input = $( '<input />' );
+                    input.attr( 'autocomplete','off' );
+                    form.append( input );
+                    return input;
+                },
+                plugin: function( settings, original ) {
+                    var form = this,
+                            input = form.find( "input" );
+                    settings.onblur = 'nothing';
+
+                    input.datepicker( {
+                        onSelect: function() {
+                            form.submit();
+                        },
+
+                        onClose: function() {
+                            setTimeout( function() {
+                                if ( !input.is( ':focus' ) ) {
+                                    original.reset( form );
+                                } else {
+                                    form.submit();
+                                }
+                            }, 150 );
+                        }
+                    } );
+                }
+            } );
+
+            function get_values(tid){
+                $.post('/ajax/get_values/?name=' + tid, function(data) {
+                    var table = $('<table class="db_table"></table>');
+                    var thead = $('<thead class="titles"></thead>');
+                    var tbody = $('<tbody class="values"></tbody>');
+                    var type_field = {};
+                    var field_position = {};
+                    $.each(data.fields, function(i, field){
+                        thead.append($('<td>'+field.title+'</td>'));
+                        type_field[field.id] = field.type;
+                        field_position[field.id] = i;
+
+                    })
+
+                    $.each(data.values, function(i, values){
+                        var field_values = {};
+                        var row = -1;
+                        $.each(values, function(i, value){
+                            field_values[value.fid] = value;
+                            row = value.row;
+                        })
+                        if (field_values){
+                            var tr = $('<tr></tr>');
+                            $.each(field_position, function(k, pos){
+                                var val = field_values[k] ? field_values[k].value : '';
+                                var td = $('<td></td>');
+                                td.append($('<div id="cell_'+row+'_'+k+'_'+type_field[k]+'" class="cell type_'+type_field[k]+'">'+val+'</td>'));
+                                tr.append(td);
+                            })
+                            tbody.append(tr);
+                        }
+
+                    })
+
+                    table.append(thead);
+                    table.append(tbody);
+                    $('div.rightColumn').html(table);
+                    $("div.cell.type_int, div.cell.type_char").editable("/ajax/edit/", {
+                        indicator : "<img src='{{ STATIC_URL }}loading.gif' class='loading' />",
+                        tooltip   : "...",
+                        style  : "inherit",
+                        placeholder:"&nbsp;",
+                        onsubmit: function(settings, td) {
+                            var cell = $(this).parents('td').find('div.cell');
+                            if (cell.hasClass('type_char')){
+                                return true;
+                            }
+                            var input = $(td).find('input');
+                            var new_value = input.val();
+                            if (new_value != null && new_value.match(/^\d+$/)) {
+                                return true;
+                            } else {
+                                input.css('background-color','#c00').css('color','#fff');
+                                return false;
+                            }
+                        }
+                    });
+
+
+                    $("div.cell.type_date").editable("/ajax/edit/", {
+                        indicator : "<img src='{{ STATIC_URL }}loading.gif' class='loading' />",
+                        tooltip   : "...",
+                        style  : "inherit",
+                        type: 'datepicker',
+                        placeholder:"&nbsp;",
+                        onsubmit: function(settings, td) {
+                            var input = $(td).find('input');
+                            var new_value = input.val();
+                            if (new_value != null && new_value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                return true;
+                            } else {
+                                input.css('background-color','#c00').css('color','#fff');
+                                return false;
+                            }
+                        }
+                    });
+                }, 'json');
+            }
+            {% if tables %}
+                get_values({{ tables.0.pk }});
+            {% endif %}
+            $('div.a_table').click(function(){
+               get_values($(this).attr('data'));
+                $('div.a_table').removeClass('a_selected');
+                $(this).addClass('a_selected');
+            });
+
+        })
+    </script>
+</head>
+
+<body>
+<div class="fon">
+    <div class="leftColumn">
+        {% for table in tables %}
+            <div class="a_table{% if forloop.first %} a_selected{% endif %}" data="{{ table.pk }}">{{ table.title }}</div>
+        {% endfor %}
+    </div>
+    <div class="centerColumn">
+    </div>
+    <div class="rightColumn">
+    </div>
+</div>
+</body>
+</html>
