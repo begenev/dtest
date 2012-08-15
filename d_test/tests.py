@@ -10,7 +10,7 @@ from django.test import TestCase
 
 class MainTest(TestCase):
 
-    fixtures = ['data.json']
+    fixtures = ['data.json', 'dynamic.json']
 
     def test_ajax_edit(self):
         edit_url = reverse('cell_ajax_edit')

@@ -4,11 +4,20 @@ from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
 
 from django.db import models
+from django.db.utils import DatabaseError
 
 
 class SysFileInfo(models.Model):
     filename = models.CharField(u'Название файла', max_length=64, db_index=True, unique=True)
     update_time = models.DateTimeField(u'Дата последенего изменения')
+
+    class Meta:
+        verbose_name = u'Системные данные'
+        verbose_name_plural = u'Системные данные'
+
+
+    def __unicode__(self):
+        return u'%s - %s' % (self.filename , self.update_time)
 
 TYPE_FIELDS = {
     'int':0,
@@ -54,6 +63,13 @@ class TableInfo(models.Model):
     def synced_model(self):
         return self.dynamic_class._model
 
+    class Meta:
+        verbose_name = u'Таблица'
+        verbose_name_plural = u'Таблицы'
+
+    def __unicode__(self):
+        return u'%s: %s' % (self.name , self.title)
+
 class FieldInfo(models.Model):
 
     TYPE_CHOICES = TYPE_FIELD_CHOICES
@@ -68,8 +84,12 @@ class FieldInfo(models.Model):
         verbose_name = u'Поле'
         verbose_name_plural = u'Поля'
 
+    class Meta:
+        verbose_name = u'Поле'
+        verbose_name_plural = u'Поля'
+
     def __unicode__(self):
-        return self.table.name + '.' + self.name
+        return u'%s.%s: %s (тип %s)' % (self.table.name , self.name, self.title, TYPE_FIELD_FROM_NUMBER.get(self.type, u'неизвестен'))
 
 
 class CommonModel(object):
