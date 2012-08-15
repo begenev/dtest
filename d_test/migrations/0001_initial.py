@@ -19,7 +19,7 @@ class Migration(SchemaMigration):
         # Adding model 'TableInfo'
         db.create_table('d_test_tableinfo', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=64)),
+            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=64)),
             ('title', self.gf('django.db.models.fields.CharField')(max_length=128)),
         ))
         db.send_create_signal('d_test', ['TableInfo'])
@@ -35,16 +35,22 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal('d_test', ['FieldInfo'])
 
-        # Adding model 'EntityData'
-        db.create_table('d_test_entitydata', (
+        # Adding model 'd_test_users'
+        db.create_table('d_test_users', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('row', self.gf('django.db.models.fields.IntegerField')(default=0)),
-            ('field', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['d_test.FieldInfo'])),
-            ('int_data', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
-            ('char_data', self.gf('django.db.models.fields.CharField')(max_length=1024, null=True, blank=True)),
-            ('date_data', self.gf('django.db.models.fields.DateField')(null=True, blank=True)),
+            (u'name', self.gf('django.db.models.fields.CharField')(max_length=128, null=True, blank=True)),
+            (u'paycheck', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
+            (u'date_joined', self.gf('django.db.models.fields.DateField')(null=True, blank=True)),
         ))
-        db.send_create_signal('d_test', ['EntityData'])
+        db.send_create_signal('d_test', ['d_test_users'])
+
+        # Adding model 'd_test_rooms'
+        db.create_table('d_test_rooms', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            (u'department', self.gf('django.db.models.fields.CharField')(max_length=128, null=True, blank=True)),
+            (u'spots', self.gf('django.db.models.fields.IntegerField')(null=True, blank=True)),
+        ))
+        db.send_create_signal('d_test', ['d_test_rooms'])
 
 
     def backwards(self, orm):
@@ -57,19 +63,26 @@ class Migration(SchemaMigration):
         # Deleting model 'FieldInfo'
         db.delete_table('d_test_fieldinfo')
 
-        # Deleting model 'EntityData'
-        db.delete_table('d_test_entitydata')
+        # Deleting model 'd_test_users'
+        db.delete_table('d_test_users')
+
+        # Deleting model 'd_test_rooms'
+        db.delete_table('d_test_rooms')
 
 
     models = {
-        'd_test.entitydata': {
-            'Meta': {'object_name': 'EntityData'},
-            'char_data': ('django.db.models.fields.CharField', [], {'max_length': '1024', 'null': 'True', 'blank': 'True'}),
-            'date_data': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'}),
-            'field': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['d_test.FieldInfo']"}),
+        'd_test.d_test_rooms': {
+            'Meta': {'object_name': 'd_test_rooms', 'db_table': "'d_test_rooms'"},
+            u'department': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'int_data': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'}),
-            'row': ('django.db.models.fields.IntegerField', [], {'default': '0'})
+            u'spots': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'})
+        },
+        'd_test.d_test_users': {
+            'Meta': {'object_name': 'd_test_users', 'db_table': "'d_test_users'"},
+            u'date_joined': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            u'name': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'}),
+            u'paycheck': ('django.db.models.fields.IntegerField', [], {'null': 'True', 'blank': 'True'})
         },
         'd_test.fieldinfo': {
             'Meta': {'object_name': 'FieldInfo'},
@@ -89,7 +102,7 @@ class Migration(SchemaMigration):
         'd_test.tableinfo': {
             'Meta': {'object_name': 'TableInfo'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
+            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '64'}),
             'title': ('django.db.models.fields.CharField', [], {'max_length': '128'})
         }
     }

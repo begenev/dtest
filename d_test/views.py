@@ -4,16 +4,15 @@ import json
 from django.core.exceptions import ValidationError
 import os
 
-from django.http import HttpResponse, HttpResponseRedirect, Http404
-from django.shortcuts import render_to_response, render
-from django.template import RequestContext
+from django.http import HttpResponse, Http404
+from django.shortcuts import render
 
 from django.conf import settings
 from os.path import join
 import re
 
 import yaml
-from d_test.models import TableInfo, SysFileInfo, FieldInfo, TYPE_FIELDS, EntityData, TYPE_FIELD_FROM_NUMBER
+from d_test.models import TableInfo, SysFileInfo, FieldInfo, TYPE_FIELDS, TYPE_FIELD_FROM_NUMBER
 
 def index(request):
 
@@ -80,34 +79,33 @@ def ajax_edit(request):
     result = request.POST.get('value','')
 
     types_re = '|'.join(TYPE_FIELDS.keys())
-    match_id = re.compile(r'^cell_\d+_\d+_('+types_re+')$')
+    match_id = re.compile(r'^c_[1-9]\d*_\d+_\d+_('+types_re+')$')
     if not match_id.match(table_id):
         raise Http404
 
     names= table_id.split('_')
 
-    field = FieldInfo.objects.all()
+    try:
+        table = TableInfo.objects.get(pk=names[1])
+    except TableInfo.DoesNotExist:
+        raise Http404
 
     try:
-        field = FieldInfo.objects.get(pk=names[2])
+        field_name = table.fieldinfo_set.get(pk = names[3], type = TYPE_FIELDS[names[4]]).name
     except FieldInfo.DoesNotExist:
         raise Http404
 
-    if field:
-        try:
-            obj, is_created = EntityData.objects.get_or_create(
-                field=field,
-                row=names[1],
-                defaults={
-                    names[3]+'_data':result
-                })
-
-            if not is_created:
-                setattr(obj, names[3]+'_data', result)
-                obj.save()
-        except ValueError:
-            raise Http404
-
+    id = int(names[2])
+    try:
+        if id:
+            obj = table.dynamic_objects.get(pk = names[2])
+            setattr(obj, field_name, result)
+            obj.save()
+        else:
+            kwargs = {field_name: result}
+            obj = table.dynamic_objects.create(**kwargs)
+    except (ValidationError, ValueError):
+        raise Http404
 
     return HttpResponse(result, mimetype='text/plain')
 
@@ -124,46 +122,42 @@ def get_values(request):
         except ValueError, TableInfo.DoesNotExist:
             pass
 
-        
     if table:
-        json_data['fields'] = [{'id':f.pk,
+        values = table.dynamic_objects.all().order_by('pk')
+        fields_list = [{'id':f.pk,
+                                'name':f.name,
                                 'title':f.title,
                                 'type':TYPE_FIELD_FROM_NUMBER.get(f.type,'unknown')} \
-                                for f in FieldInfo.objects.filter(table = table).order_by('position') ]
+                                for f in table.fieldinfo_set.all().order_by('position') ]
         json_data['values'] = []
-        values = EntityData.objects.filter(field__table=table).\
-                order_by( 'field__position')
-
-        values_dict = {}
-        row = []
+        values_list = []
         for v in values:
-            type_data = TYPE_FIELD_FROM_NUMBER.get(v.field.type,'unknown')
+            row = []
+            for f in fields_list:
+                val = getattr(v, f['name'], '')
+                if f['type'] == 'date' and val:
+                    val = val.isoformat()
+
+                if val is None: val = ''
+                row.append(val)
+
             cell_data = {
-                'value':getattr(v, '%s_data' % type_data),
-                'fid': v.field.pk,
-                'row': v.row
+                'id': v.pk,
+                'row': row
             }
-            if type_data == 'date' and cell_data['value']:
-                cell_data['value'] = cell_data['value'].isoformat()
 
-
-            if v.row in values_dict:
-                values_dict[v.row].append(cell_data)
-            else:
-                values_dict[v.row] = [cell_data]
+            values_list.append(cell_data)
 
         # добавляем пустые ячейки в конец таблицы
-        max_row = max(values_dict.keys()) + 1 if values_dict else 0
-        values_dict[max_row] = []
-        for field in json_data['fields']:
-            values_dict[max_row].append({
-                'value':'',
-                'fid': field['id'],
-                'row': max_row
-            })
+        values_list.append({
+            'id': 0,
+            'row':[''] * len(fields_list)
+        })
 
-        sorted(values_dict)
-        json_data['values'] = values_dict.values()
+        json_data.update({
+            'fields': fields_list,
+            'values': values_list
+        })
 
     json_data = json.dumps(json_data, ensure_ascii=False, separators=(',',':'))
     return HttpResponse(json_data, content_type='text/plain; charset=utf-8')

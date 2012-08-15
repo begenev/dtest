@@ -150,27 +150,26 @@
                     var thead = $('<thead class="titles"></thead>');
                     var tbody = $('<tbody class="values"></tbody>');
                     var type_field = {};
-                    var field_position = {};
+                    var field_id = {};
                     $.each(data.fields, function(i, field){
                         thead.append($('<td>'+field.title+'</td>'));
-                        type_field[field.id] = field.type;
-                        field_position[field.id] = i;
+                        type_field[i] = field.type;
+                        field_id[i] = field.id;
 
                     })
 
                     $.each(data.values, function(i, values){
                         var field_values = {};
-                        var row = -1;
-                        $.each(values, function(i, value){
-                            field_values[value.fid] = value;
+                        var row = values.id;
+                        $.each(values.row, function(i, value){
+                            field_values[i] = value;
                             row = value.row;
                         })
-                        if (field_values){
+                        if (values.row){
                             var tr = $('<tr></tr>');
-                            $.each(field_position, function(k, pos){
-                                var val = field_values[k] ? field_values[k].value : '';
+                            $.each(values.row, function(i, val){
                                 var td = $('<td></td>');
-                                td.append($('<div id="cell_'+row+'_'+k+'_'+type_field[k]+'" class="cell type_'+type_field[k]+'">'+val+'</td>'));
+                                td.append($('<div id="c_'+tid+'_'+values.id+'_'+field_id[i]+'_'+type_field[i]+'" class="cell type_'+type_field[i]+'">'+val+'</td>'));
                                 tr.append(td);
                             })
                             tbody.append(tr);
